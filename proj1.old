@@ -1,0 +1,324 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+int returnNumber(char *strNumber); //done
+int textToHex();  //done
+int textToHexText(int skip, int numberOfChars); //almost done - TO DO: debug arguments
+int textToPrintable(int longest);  //TO DO
+int hexToText();   //done - unexpected behavior
+void printHelp();  //WIP
+void errorHandling(int errorNum);  //TO DO - ask about ERRNO
+
+int main(int argc, char *argv[])
+{
+  int errorNum = 0; //this will remain 0 if there is no error
+  int xFlag, rFlag, sValue, nValue, capSValue;
+  xFlag = rFlag = sValue = nValue = capSValue = 0;
+
+  if (argc == 1)
+    {
+      textToHexText(sValue,nValue);
+    }
+
+  for (int i = 1; i < argc; i++)
+  {
+    if (argv[i][0] == '-' && argv[i][2] == '\0')
+    {
+      switch (argv[i][1])
+      {
+        case 's':
+          if (returnNumber(argv[i+1]) > 0)
+          {
+            sValue = returnNumber(argv[i+1]);
+            i++;
+          }
+          else
+          {
+            errorNum = 1;  //next argument is not a number
+          }
+          break;
+
+        case 'n':
+          if (returnNumber(argv[i+1]) > 0)
+          {
+            nValue = returnNumber(argv[i+1]);
+            i++;
+          }
+          else
+          {
+            errorNum = 1;  //next argument is not a number
+          }
+          break;
+
+        case 'S':
+          if (returnNumber(argv[i+1]) > 0 && returnNumber(argv[i+1]) < 200)
+          {
+            capSValue = returnNumber(argv[i+1]);
+            ++i;
+          }
+          else
+          {
+            errorNum = 3;  //next argument is not a valid number
+          }
+          break;
+
+        case 'r':
+          {
+            rFlag = 1;
+            break;
+          }
+
+        case 'x':
+          {
+            xFlag = 1;
+            break;
+          }
+        default:
+          printHelp();
+      }
+    }
+    else
+    {
+      printHelp();
+    }
+
+    if ((capSValue != 0) && (nValue != 0) && (sValue + rFlag + xFlag) == 0)
+      errorNum = textToPrintable(capSValue);
+
+    if ((capSValue != 0) && (nValue + sValue + rFlag + xFlag) == 0)
+      errorNum = textToPrintable(capSValue);
+
+    if ((rFlag == 1) && (capSValue + nValue + sValue + xFlag) == 0)
+      errorNum = hexToText();
+
+    if ((xFlag == 1) && (capSValue + nValue + sValue + rFlag) == 0)
+      errorNum = textToHex();
+
+
+  }
+
+  return errorNum;
+}
+
+int returnNumber(char *strNumber)
+{
+  int number;
+  char *p_nan;
+
+  number = strtol(strNumber,&p_nan,10);
+
+  if (p_nan[0] == '\0')
+  {
+    return number;
+  }
+  else
+  {
+    return 0;
+  }
+}
+
+int textToHex()
+{
+  int currentChar = 0;
+  while ((currentChar = getchar()) != EOF)
+  {
+    printf("%x",currentChar);
+  }
+  printf("\n");
+  return 0;
+}
+
+
+
+int textToHexText(int skip, int numberOfChars)
+{
+  int currentChar = 0;
+  int i,j;
+  char text[19] = {32};
+  text[0] = '|';
+  text[17] = '|';
+  text[18] = '\0';
+
+  //for skipping chars we throw getchars away
+  for (i = 0; i < skip; i++)
+  {
+    getchar();
+  }
+
+  //beginning
+  for (i = 0; (currentChar = getchar()) != EOF; i++)  //linekeeper
+  {
+    printf("%08x  %x",i*16, currentChar);  //prints address and first byte
+    text[1] = currentChar;
+
+    for (j = 2; j <= 16; j++)
+    {
+      if (j == 9)  //additional space in the middle
+      {
+        putchar(32);
+      }
+
+      currentChar = getchar();  //second and every j-th byte
+
+
+      if ((isprint(currentChar) != 0) && (currentChar < 128)) //assigning the char to array which is printed afterwards
+      {
+        text[j] = currentChar;
+      }
+      else
+      {
+        text[j] = '.';
+      }
+
+      if ((currentChar == EOF) || (i * 16 + j == numberOfChars))  //when EOF is reached, function quickly fills the line with spaces and ends
+      {
+        for (int k = j; k <= 16; k++)
+          {
+            printf("   ");
+            text[k] = ' ';
+
+            if (k == 9) putchar(32);
+          }
+        break;
+      }
+        printf(" %02x", currentChar);
+    }
+
+    printf("  %s\n",text);
+
+  }
+
+  return 0;
+}
+
+
+
+int textToPrintable(int shortest)
+{
+  char finalString[200];
+  int length, currentChar;
+  length = currentChar = 0;
+
+  while ((currentChar = getchar()) != EOF)  //1st char of string - PROBLEM: getchar reads \0 as '\' and '0'
+  {
+    length = 0;
+    while ((currentChar != '\0') && (currentChar != '\n') && (currentChar != EOF))    //build array if \0 or \n are not the char
+    {
+      if ((isprint(currentChar) != 0) || (isspace(currentChar) != 0))  //building just from printables and non-empty chars
+      {
+          finalString[length] = currentChar;
+          length++;
+      }
+
+      currentChar = getchar(); //get new char
+    }
+
+    if (length > shortest)   //if it's long enough it gets printed with a new line
+        printf("%s\n", finalString);
+
+  }
+
+  return 0;
+}
+
+
+
+int hexToText()
+{
+  int hex1, hex2, dec1, dec2, dec, errorNum;
+  hex1 = hex2 = dec1 = dec2 = errorNum = 0;
+
+  while (((hex1 = getchar()) != EOF) || ((hex2 = getchar()) != EOF))
+  {
+    dec = 0;
+
+    if ((isspace(hex1) != 0) && (isspace(hex2) == 0))  //1st is white-space and 2nd is something
+    {
+      hex1 = hex2; //assigns value to 1st part
+      do //and looks for new 2nd part of hex number
+      {
+        hex2 = getchar();
+      } while (isspace(hex2) == 0);
+    }
+
+    if ((isspace(hex1) == 0) && (isspace(hex2) != 0)) //1st is something and 2nd is white-space
+    {
+      do //looking for new 2nd part of hex number
+      {
+        hex2 = getchar();
+      } while (isspace(hex2) == 0);
+    }
+
+    if ((isspace(hex1) != 0) && (isspace(hex2) != 0)) //both are white-spaces
+    {
+      do // looks for new 1st part of hex number
+      {
+        hex1 = getchar();
+      } while (isspace(hex1) == 0);
+
+      do //looks for new 2nd part of hex number
+      {
+        hex2 = getchar();
+      } while (isspace(hex2) == 0);
+    }
+
+    //drama is over, we have our hex number
+
+    hex1 = toupper(hex1);  //converting to uppercase to remove one if statement
+    hex2 = toupper(hex2);
+
+    printf("%c%c  ", hex1, hex2);
+
+    if (hex1 >= 48 && hex1 <= 57) //numbers
+    {
+      dec1 = hex1 - 48; //difference between ASCII code and decimal
+    }
+    else
+    {
+      errorNum = 2;
+    }
+
+    if (hex1 >= 65 && hex1 <= 70) //A-F
+    {
+      dec1 = hex1 - 55;  //difference between ASCII code and numerical value of A-F
+    }
+    else
+    {
+      errorNum = 2;
+    }
+
+
+    if (hex2 >= 48 && hex2 <= 57)
+    {
+      dec2 = hex2 - 48;
+    }
+    else
+    {
+      errorNum = 2;
+    }
+
+    if (hex2 >= 65 && hex2 <= 70)
+    {
+      dec2 = hex2 - 55;
+    }
+    else
+    {
+      errorNum = 2;
+    }
+
+    dec = (dec1 * 16) + dec2;
+
+    printf("%c", dec);
+  }
+
+  return errorNum;
+}
+
+void printHelp()
+{
+  printf("IZP Project 1 help\n\n");
+  printf("This program converts binary input to text.\n\n");
+  printf("OPTIONAL ARGUMENTS:\n");
+  printf("[-s X]  ");
+}

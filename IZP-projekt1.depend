@@ -1,0 +1,6 @@
+# depslib dependency file v1.0
+1478611235 source:c:\users\michal pospíšil\development\codeblocks\projects\izp-projekt1\main.c
+	<stdio.h>
+	<stdlib.h>
+	<ctype.h>
+
